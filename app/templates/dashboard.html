@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Cognitive Fatigue Detection</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.0.0/dist/chart.umd.js"></script>
+    <style>
+        /* Dashboard Specific Styles */
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+            background: var(--bg-gradient);
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid var(--card-border);
+            padding: 30px 20px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 40px;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .sidebar-header i {
+            font-size: 2rem;
+            color: var(--secondary-color);
+            margin-right: 10px;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 15px;
+        }
+
+        .sidebar-menu a {
+            color: rgba(248, 250, 252, 0.75);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            padding: 14px 18px;
+            border-radius: 14px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            background: transparent;
+        }
+
+        .sidebar-menu a i {
+            margin-right: 14px;
+            font-size: 1.1rem;
+            width: 24px;
+        }
+
+        .sidebar-menu a:hover,
+        .sidebar-menu a.active {
+            background: rgba(239, 68, 68, 0.16);
+            color: var(--text-primary);
+            transform: translateX(4px);
+        }
+
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            padding: 20px 30px;
+            border-radius: 15px;
+            border: 1px solid var(--card-border);
+        }
+
+        .top-bar-left h2 {
+            color: var(--text-primary);
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, #ef4444 0%, #7f1d1d 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .user-details p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .user-details .name {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 15px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            color: var(--text-primary);
+        }
+
+        .stat-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .stat-card-title {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        .stat-card-icon {
+            width: 54px;
+            height: 54px;
+            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-card-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .stat-card-footer {
+            font-size: 0.85rem;
+            color: var(--text-tertiary);
+        }
+
+        .fatigue-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .fatigue-low {
+            background: rgba(40, 167, 69, 0.2);
+            color: #6bff9d;
+            border: 1px solid rgba(40, 167, 69, 0.5);
+        }
+
+        .fatigue-medium {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffd700;
+            border: 1px solid rgba(255, 193, 7, 0.5);
+        }
+
+        .fatigue-high {
+            background: rgba(220, 53, 69, 0.2);
+            color: #ff6b9d;
+            border: 1px solid rgba(220, 53, 69, 0.5);
+        }
+
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 15px;
+            padding: 25px;
+            color: var(--text-primary);
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chart-title i {
+            color: var(--secondary-color);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                border-right: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                padding: 20px;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+
+            .sidebar-menu {
+                display: flex;
+                gap: 10px;
+            }
+
+            .top-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 500px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-card-value {
+                font-size: 1.8rem;
+            }
+
+            .sidebar-menu {
+                flex-wrap: wrap;
+            }
+        }
+
+        .loading {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 20px;
+        }
+
+        .loading i {
+            font-size: 2rem;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Performance Insights Section */
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .insight-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 15px;
+            padding: 25px;
+            color: var(--text-primary);
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .insight-card h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .insight-card i {
+            color: var(--secondary-color);
+        }
+
+        .insight-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .insights-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-primary);
+        }
+
+        .insights-title i {
+            color: var(--secondary-color);
+        }
+
+        /* Action Button */
+        .action-buttons {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: var(--button-bg);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+            box-shadow: 0 18px 45px rgba(31, 41, 55, 0.24);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 22px 60px rgba(31, 41, 55, 0.28);
+            background: var(--button-hover);
+        }
+
+        .confidence-meter {
+            margin-top: 10px;
+            height: 6px;
+            background: rgba(248, 249, 250, 0.12);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ef4444 0%, #f87171 50%, #dc2626 100%);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        /* Tracking Buttons */
+        .btn-tracking {
+            background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(185, 28, 28, 0.3);
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        .btn-tracking:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 45px rgba(185, 28, 28, 0.5);
+        }
+
+        .btn-tracking:active {
+            transform: translateY(0);
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-stop:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 45px rgba(102, 126, 234, 0.5);
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% {
+                box-shadow: 0 10px 30px rgba(185, 28, 28, 0.3);
+            }
+            50% {
+                box-shadow: 0 10px 50px rgba(239, 68, 68, 0.5);
+            }
+        }
+
+        /* Tracking Section */
+        .tracking-section {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            padding: 25px 30px;
+            border-radius: 15px;
+            border: 1px solid var(--card-border);
+            margin-bottom: 30px;
+            border-left: 4px solid #ef4444;
+        }
+
+        .tracking-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .tracking-header i {
+            font-size: 1.8rem;
+            color: #ef4444;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .tracking-caption {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .tracking-subtext {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 6px;
+            margin-bottom: 18px;
+            font-weight: 500;
+        }
+
+        .tracking-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.7;
+                transform: scale(1.1);
+            }
+        }
+
+        .tracking-status {
+            padding: 8px 16px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            color: #ef4444;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-left: auto;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .tracking-status.active {
+            opacity: 1;
+            background: rgba(239, 68, 68, 0.25);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-brain"></i>
+                CognalyzeAI
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="/dashboard" class="active"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+                <li><a href="/activity"><i class="fas fa-history"></i> Activity</a></li>
+                <li><a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="top-bar-left">
+                    <h2>Dashboard</h2>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <button id="themeToggle" class="btn-primary theme-toggle" type="button" onclick="toggleTheme()">
+                        <i class="fas fa-sun"></i> Light Mode
+                    </button>
+                    <div class="user-avatar" id="userAvatar">U</div>
+                    <div class="user-details">
+                        <p class="name" id="userName">User</p>
+                        <p id="userEmail">user@example.com</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tracking Section -->
+            <div class="tracking-section">
+                <div class="tracking-header">
+                    <i class="fas fa-eye"></i>
+                    <div>
+                        <p class="tracking-caption">Behavior Monitoring</p>
+                        <p class="tracking-subtext">Track your cognitive state and fatigue levels in real-time</p>
+                    </div>
+                </div>
+                <div class="tracking-buttons">
+                    <button class="btn-tracking" onclick="startTracking()" id="startBtn">
+                        <i class="fas fa-circle"></i> Start Monitoring
+                    </button>
+                    <button class="btn-stop" onclick="stopTracking()" id="stopBtn" style="display: none;">
+                        <i class="fas fa-stop-circle"></i> Stop Monitoring
+                    </button>
+                    <div class="tracking-status" id="trackingStatus">
+                        <i class="fas fa-dot-circle" style="color: #ef4444; margin-right: 6px;"></i>
+                        <span>Monitoring Active</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">Typing Speed</div>
+                        <div class="stat-card-icon">
+                            <i class="fas fa-keyboard"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" id="typingSpeed">0</div>
+                    <div class="stat-card-footer">Words per minute</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">Key Presses</div>
+                        <div class="stat-card-icon">
+                            <i class="fas fa-keyboard"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" id="activityLevel">0</div>
+                    <div class="stat-card-footer">Keyboard activity score</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">Fatigue Status</div>
+                        <div class="stat-card-icon">
+                            <i class="fas fa-heartbeat"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" id="fatigueStatus">--</div>
+                    <div class="stat-card-footer">Cognitive State
+                        <div class="fatigue-badge" id="fatigueBadge"></div>
+                    </div>
+                    <div class="confidence-meter">
+                        <div class="confidence-fill" id="confidenceFill" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">Session Statistics</div>
+                        <div class="stat-card-icon">
+                            <i class="fas fa-stopwatch"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" id="sessionsToday">0</div>
+                    <div class="stat-card-footer">Active sessions today</div>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-title">
+                        <i class="fas fa-chart-line"></i> Fatigue Levels Over Time
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="fatigueChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-title">
+                        <i class="fas fa-keyboard"></i> Typing Speed Trend
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="typingChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Insights Section -->
+            <div style="margin-top: 40px;">
+                <div class="insights-title">
+                    <i class="fas fa-lightbulb"></i> Performance Insights
+                </div>
+                <div class="insights-grid">
+                    <div class="insight-card">
+                        <h4><i class="fas fa-check-circle"></i> Consistency</h4>
+                        <p>Your typing patterns show good consistency throughout the day. Keep maintaining regular work intervals.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4><i class="fas fa-hourglass-half"></i> Peak Performance</h4>
+                        <p>Your cognitive performance peaks between 10 AM - 12 PM. Schedule critical tasks during this time.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4><i class="fas fa-battery-full"></i> Energy Level</h4>
+                        <p>Take regular breaks every 45 minutes to maintain optimal focus and prevent fatigue buildup.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4><i class="fas fa-target"></i> Goal Progress</h4>
+                        <p>You're on track! Maintain your current activity level to achieve your weekly performance goals.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4><i class="fas fa-exclamation-circle"></i> Caution</h4>
+                        <p>Fatigue detected after 6 PM. Consider focusing on lighter tasks during evening hours.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4><i class="fas fa-star"></i> Recommendation</h4>
+                        <p>Based on your patterns, increasing water intake may help with afternoon fatigue levels.</p>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tracking.js') }}"></script>
+    
+    <footer class="app-footer">
+        <div class="footer-content">
+            <p>&copy; 2026 All rights belongs to AASS</p>
+        </div>
+    </footer>
+</body>
+</html>

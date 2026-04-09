@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity - Cognitive Fatigue Detection</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Activity Page Specific Styles */
+        .activity-container {
+            display: flex;
+            min-height: 100vh;
+            background: var(--bg-gradient);
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid var(--card-border);
+            padding: 30px 20px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 40px;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .sidebar-header i {
+            font-size: 2rem;
+            color: var(--accent-color);
+            margin-right: 10px;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 15px;
+        }
+
+        .sidebar-menu a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            padding: 14px 18px;
+            border-radius: 14px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .sidebar-menu a i {
+            margin-right: 14px;
+            font-size: 1.15rem;
+            width: 24px;
+        }
+
+        .sidebar-menu a:hover,
+        .sidebar-menu a.active {
+            background: rgba(239, 68, 68, 0.16);
+            color: var(--text-primary);
+            transform: translateX(4px);
+        }
+
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            padding: 20px 30px;
+            border-radius: 15px;
+            border: 1px solid var(--card-border);
+        }
+
+        .top-bar-left h2 {
+            color: var(--text-primary);
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, #ef4444 0%, #7f1d1d 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .user-details p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .user-details .name {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        /* Activity Table */
+        .activity-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 15px;
+            padding: 25px;
+            color: var(--text-primary);
+        }
+
+        .activity-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .activity-title i {
+            color: var(--accent-color);
+        }
+
+        .activity-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .activity-table thead {
+            background: rgba(255, 255, 255, 0.05);
+            border-bottom: 2px solid var(--card-border);
+        }
+
+        .activity-table th {
+            padding: 15px;
+            text-align: left;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .activity-table td {
+            padding: 15px;
+            border-bottom: 1px solid var(--card-border);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .activity-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .metric-value {
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+
+        .activity-table-wrapper {
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--text-primary);
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .empty-state i {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            opacity: 0.8;
+            color: var(--accent-color);
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .empty-state p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin-bottom: 30px;
+        }
+
+        .empty-state-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-empty-action {
+            background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.25);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-empty-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.35);
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 20px;
+        }
+
+        .loading i {
+            font-size: 2rem;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Filter Section */
+        .filter-section {
+            margin-bottom: 25px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-input {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-input input {
+            width: 100%;
+            padding: 10px 15px;
+            background: rgba(248, 250, 252, 0.08);
+            border: 1px solid rgba(248, 250, 252, 0.12);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .filter-input input::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .filter-input input:focus {
+            outline: none;
+            background: rgba(248, 250, 252, 0.12);
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+        /* Delete Button */
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .btn-delete:hover {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: rgba(239, 68, 68, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-delete:active {
+            transform: translateY(0);
+        }
+
+        /* Delete All Section */
+        .delete-all-section {
+            margin-top: 25px;
+            padding: 20px;
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .delete-all-section p {
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+        }
+
+        .btn-delete-all {
+            background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.25);
+        }
+
+        .btn-delete-all:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.35);
+        }
+
+        .btn-delete-all:active {
+            transform: translateY(0);
+        }        /* Feature Cards */
+        .features-section {
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 1px solid var(--card-border);
+        }
+
+        .features-section h3 {
+            font-size: 1.5rem;
+            color: var(--text-primary);
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .features-section i {
+            color: var(--accent-color);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .feature-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 15px;
+            padding: 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            color: var(--text-primary);
+            text-align: center;
+        }
+
+        .feature-card:hover {
+            background: rgba(239, 68, 68, 0.10);
+            transform: translateY(-5px);
+            border-color: rgba(239, 68, 68, 0.33);
+            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.1);
+        }
+
+        .feature-card i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: var(--accent-color);
+        }
+
+        .feature-card h4 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .pagination button {
+            padding: 10px 15px;
+            background: rgba(248, 250, 252, 0.08);
+            border: 1px solid rgba(248, 250, 252, 0.12);
+            color: var(--text-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: rgba(248, 250, 252, 0.12);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination button.active {
+            background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
+            border-color: var(--accent-color);
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .activity-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                border-right: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                padding: 20px;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+
+            .sidebar-menu {
+                display: flex;
+                gap: 10px;
+            }
+
+            .top-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .activity-table {
+                font-size: 0.85rem;
+            }
+
+            .activity-table th,
+            .activity-table td {
+                padding: 10px;
+            }
+
+            .filter-section {
+                flex-direction: column;
+            }
+
+            .filter-input {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="activity-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-brain"></i>
+                CognalyzeAI
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="/dashboard"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+                <li><a href="/activity" class="active"><i class="fas fa-history"></i> Activity</a></li>
+                <li><a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="top-bar-left">
+                    <h2>Activity Logs</h2>
+                </div>
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">U</div>
+                    <div class="user-details">
+                        <p class="name" id="userName">User</p>
+                        <p id="userEmail">user@example.com</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Card -->
+            <div class="activity-card">
+                <div class="activity-title">
+                    <i class="fas fa-table"></i> Behavior Tracking History
+                </div>
+
+                <div class="filter-section">
+                    <div class="filter-input">
+                        <input type="text" id="searchInput" placeholder="Search by ID or metric..." />
+                    </div>
+                </div>
+
+                <div class="activity-table-wrapper">
+                    <div class="loading" id="loadingIndicator">
+                        <i class="fas fa-spinner"></i> Loading activity logs...
+                    </div>
+                    <table class="activity-table" id="activityTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Typing Speed <span style="font-size: 0.8rem;">(WPM)</span></th>
+                                <th>Key Presses</th>
+                                <th>Inactivity <span style="font-size: 0.8rem;">(sec)</span></th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activityTableBody">
+                        </tbody>
+                    </table>
+                    <div class="empty-state" id="emptyState" style="display: none;">
+                        <i class="fas fa-clipboard-list"></i>
+                        <h3>No Activity Records</h3>
+                        <p>All activity logs have been deleted or no tracking has been started yet.</p>
+                        <div class="empty-state-buttons">
+                            <a href="/dashboard" class="btn-empty-action">
+                                <i class="fas fa-chart-line"></i> Go to Dashboard
+                            </a>
+                            <button class="btn-empty-action" onclick="location.reload()">
+                                <i class="fas fa-sync"></i> Refresh Page
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pagination" id="pagination"></div>
+
+                <!-- Delete All Section -->
+                <div class="delete-all-section">
+                    <p><i class="fas fa-trash"></i> Clear all activity logs from your account</p>
+                    <button class="btn-delete-all" onclick="deleteAllActivityLogs()">Delete All Activity Logs</button>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+
+    <script>
+        let activityLogs = [];
+        let currentPage = 1;
+        const itemsPerPage = 10;
+
+        // Load user info on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadUserInfo();
+            await loadActivityLogs();
+        });
+
+        async function loadUserInfo() {
+            try {
+                const response = await fetch('/api/user-info');
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('userName').textContent = data.full_name;
+                    document.getElementById('userEmail').textContent = data.email;
+                    document.getElementById('userAvatar').textContent = data.full_name.charAt(0).toUpperCase();
+                }
+            } catch (error) {
+                console.error('Error loading user info:', error);
+            }
+        }
+
+        async function loadActivityLogs() {
+            try {
+                const response = await fetch('/api/activity-logs?limit=100');
+                const data = await response.json();
+                if (data.success) {
+                    activityLogs = data.logs;
+                    displayActivityLogs();
+                } else {
+                    showEmptyState();
+                }
+            } catch (error) {
+                console.error('Error loading activity logs:', error);
+                showEmptyState();
+            }
+        }
+
+        function displayActivityLogs() {
+            const tableBody = document.getElementById('activityTableBody');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const activityTable = document.getElementById('activityTable');
+            const emptyState = document.getElementById('emptyState');
+
+            if (activityLogs.length === 0) {
+                loadingIndicator.style.display = 'none';
+                emptyState.style.display = 'block';
+                activityTable.style.display = 'none';
+                return;
+            }
+
+            loadingIndicator.style.display = 'none';
+            emptyState.style.display = 'none';
+            activityTable.style.display = 'table';
+
+            // Calculate pagination
+            const totalPages = Math.ceil(activityLogs.length / itemsPerPage);
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedLogs = activityLogs.slice(startIndex, endIndex);
+
+            // Clear table body
+            tableBody.innerHTML = '';
+
+            // Add rows
+            paginatedLogs.forEach(log => {
+                const timestamp = new Date(log.timestamp);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${timestamp.toLocaleString()}</td>
+                    <td><span class="metric-value">${log.typing_speed || 0}</span></td>
+                    <td><span class="metric-value">${log.key_presses || 0}</span></td>
+                    <td><span class="metric-value">${log.inactivity_duration || 0}</span></td>
+                    <td><button class="btn-delete" onclick="deleteActivityLog('${log._id}')"><i class="fas fa-trash"></i> Delete</button></td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            // Update pagination
+            updatePagination(totalPages);
+        }
+
+        function updatePagination(totalPages) {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+
+            if (totalPages <= 1) return;
+
+            // Previous button
+            const prevBtn = document.createElement('button');
+            prevBtn.textContent = '← Previous';
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.onclick = () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    displayActivityLogs();
+                    window.scrollTo(0, 0);
+                }
+            };
+            pagination.appendChild(prevBtn);
+
+            // Page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                const pageBtn = document.createElement('button');
+                pageBtn.textContent = i;
+                pageBtn.className = i === currentPage ? 'active' : '';
+                pageBtn.onclick = () => {
+                    currentPage = i;
+                    displayActivityLogs();
+                    window.scrollTo(0, 0);
+                };
+                pagination.appendChild(pageBtn);
+            }
+
+            // Next button
+            const nextBtn = document.createElement('button');
+            nextBtn.textContent = 'Next →';
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.onclick = () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    displayActivityLogs();
+                    window.scrollTo(0, 0);
+                }
+            };
+            pagination.appendChild(nextBtn);
+        }
+
+        function showEmptyState() {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const activityTable = document.getElementById('activityTable');
+            const emptyState = document.getElementById('emptyState');
+            const pagination = document.getElementById('pagination');
+            
+            if (loadingIndicator) loadingIndicator.style.display = 'none';
+            if (activityTable) activityTable.style.display = 'none';
+            if (emptyState) emptyState.style.display = 'flex';
+            if (pagination) pagination.innerHTML = '';
+        }
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filtered = activityLogs.filter(log => {
+                return log._id.includes(searchTerm) ||
+                    log.typing_speed.toString().includes(searchTerm) ||
+                    log.key_presses.toString().includes(searchTerm);
+            });
+            activityLogs = filtered;
+            currentPage = 1;
+            displayActivityLogs();
+        });
+
+        // Delete single activity log
+        async function deleteActivityLog(logId) {
+            try {
+                const response = await fetch(`/api/activity-logs/${logId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // Remove from local array
+                    activityLogs = activityLogs.filter(log => log._id !== logId);
+                    currentPage = 1;
+                    
+                    // Refresh the display
+                    if (activityLogs.length === 0) {
+                        showEmptyState();
+                    } else {
+                        displayActivityLogs();
+                    }
+                    
+                    // Refresh dashboard
+                    refreshDashboard();
+                    
+                    console.log('Activity log deleted successfully');
+                }
+            } catch (error) {
+                console.error('Error deleting activity log:', error);
+            }
+        }
+
+        // Delete all activity logs
+        async function deleteAllActivityLogs() {
+            try {
+                const response = await fetch('/api/activity-logs/delete/all', {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    activityLogs = [];
+                    currentPage = 1;
+                    
+                    // Clear search
+                    document.getElementById('searchInput').value = '';
+                    
+                    // Display empty state immediately
+                    showEmptyState();
+                    
+                    // Refresh dashboard
+                    refreshDashboard();
+                    
+                    console.log('All activity logs deleted successfully');
+                }
+            } catch (error) {
+                console.error('Error deleting all activity logs:', error);
+            }
+        }
+
+        // Refresh dashboard stats
+        function refreshDashboard() {
+            if (typeof window.parent !== 'undefined' && window.parent !== window) {
+                // If in iframe, send message to parent
+                window.parent.postMessage({ action: 'refreshDashboard' }, '*');
+            }
+            
+            // Also try to refresh if dashboard window is open
+            const dashboardWindow = window.open('', 'dashboard');
+            if (dashboardWindow && dashboardWindow.location.href.includes('/dashboard')) {
+                // Trigger a reload of dashboard stats
+                if (typeof dashboardWindow.loadDashboardStats === 'function') {
+                    dashboardWindow.loadDashboardStats();
+                }
+                if (typeof dashboardWindow.loadHistoricalChartData === 'function') {
+                    dashboardWindow.loadHistoricalChartData();
+                }
+            }
+        }
+    </script>
+    
+    <footer class="app-footer">
+        <div class="footer-content">
+            <p>&copy; 2026 All rights belongs to AASS</p>
+        </div>
+    </footer>
+</body>
+</html>

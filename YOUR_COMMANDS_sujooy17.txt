@@ -1,0 +1,71 @@
+EXACT COMMANDS FOR sujooy17
+Username: sujooy17
+Repo: cognitive-fatiguedetection
+
+════════════════════════════════════════════════════════════════
+
+STEP 1: FIRST, CREATE THE REPO ON GITHUB
+
+Go to: https://github.com/new
+Name: cognitive-fatiguedetection
+DO NOT initialize with README
+Click "Create repository"
+
+════════════════════════════════════════════════════════════════
+
+STEP 2: COPY & PASTE THESE COMMANDS IN POWERSHELL (one by one)
+
+Command 1:
+cd "c:\PFSD PROJECT\cognitive-fatigue-detection"
+
+Command 2:
+git status
+
+Command 3:
+git remote add origin https://github.com/sujooy17/cognitive-fatiguedetection.git
+
+Command 4:
+git branch -M main
+
+Command 5:
+git push -u origin main
+
+════════════════════════════════════════════════════════════════
+
+WHEN PROMPTED FOR PASSWORD:
+
+Username: sujooy17
+Password: (Paste your Personal Access Token)
+
+HOW TO GET TOKEN:
+1. Go to: https://github.com/settings/tokens
+2. Click "Generate new token"
+3. Name: Cognitive Fatigue Push
+4. Check: repo and write:repo_hook
+5. Copy token and use as password
+
+════════════════════════════════════════════════════════════════
+
+IF YOU GET ERRORS:
+
+"fatal: remote origin already exists"
+→ git remote remove origin
+→ Then run Command 3 again
+
+"Authentication failed"
+→ Use Personal Access Token (not your password)
+→ Get token: https://github.com/settings/tokens
+
+"fatal: not a git repository"
+→ You are in wrong folder
+→ Run: cd "c:\PFSD PROJECT\cognitive-fatigue-detection"
+
+════════════════════════════════════════════════════════════════
+
+AFTER SUCCESS:
+
+Visit: https://github.com/sujooy17/cognitive-fatiguedetection
+
+You should see all your files there! ✅
+
+════════════════════════════════════════════════════════════════

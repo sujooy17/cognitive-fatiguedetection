@@ -1,0 +1,121 @@
+SIMPLE GITHUB PUSH - QUICK COMMANDS
+════════════════════════════════════════════════════════
+
+⚡ FASTEST WAY TO PUSH TO GITHUB
+
+Replace "YOUR_USERNAME" with your GitHub username in ALL commands below.
+
+────────────────────────────────────────────────────────────
+
+STEP 1: Go to GitHub and create new repository
+────────────────────────────────────────────────────────────
+Visit: https://github.com/new
+
+Repository name: cognitive-fatigue-detection
+DO NOT initialize with README
+Click "Create repository"
+
+
+STEP 2: Copy your repository URL
+────────────────────────────────────────────────────────────
+After creating, GitHub shows your URL:
+https://github.com/YOUR_USERNAME/cognitive-fatigue-detection.git
+
+SAVE THIS URL!
+
+
+STEP 3: Open PowerShell and run these commands (one by one)
+────────────────────────────────────────────────────────────
+
+1. Navigate to project folder:
+   cd "c:\PFSD PROJECT\cognitive-fatigue-detection"
+
+2. Check git status:
+   git status
+
+3. Add GitHub remote:
+   git remote add origin https://github.com/YOUR_USERNAME/cognitive-fatigue-detection.git
+
+4. Rename branch to main:
+   git branch -M main
+
+5. Push to GitHub:
+   git push -u origin main
+
+When prompted for password: Enter your GitHub Personal Access Token
+(NOT your GitHub password!)
+
+
+STEP 4: Verify it worked
+────────────────────────────────────────────────────────────
+Check: https://github.com/YOUR_USERNAME/cognitive-fatigue-detection
+
+You should see all your files there!
+
+
+GET PERSONAL ACCESS TOKEN (if using HTTPS)
+════════════════════════════════════════════════════════
+
+1. Go to: https://github.com/settings/tokens
+2. Click "Generate new token" (classic)
+3. Name it: "Cognitive Fatigue Push"
+4. Select these scopes:
+   ✓ repo
+   ✓ write:repo_hook
+5. Click "Generate token"
+6. COPY IT IMMEDIATELY (save it somewhere safe!)
+7. Use it as your password when git asks
+
+
+EXAMPLE WITH ACTUAL COMMANDS
+════════════════════════════════════════════════════════
+
+If your GitHub username is "john_dev", run:
+
+   cd "c:\PFSD PROJECT\cognitive-fatigue-detection"
+   git status
+   git remote add origin https://github.com/john_dev/cognitive-fatigue-detection.git
+   git branch -M main
+   git push -u origin main
+
+
+COMPLETE ONE-LINER (if you know your username)
+════════════════════════════════════════════════════════
+
+Replace YOUR_USERNAME and run all at once:
+
+cd "c:\PFSD PROJECT\cognitive-fatigue-detection"; git remote add origin https://github.com/YOUR_USERNAME/cognitive-fatigue-detection.git; git branch -M main; git push -u origin main
+
+
+ERROR SOLUTIONS
+════════════════════════════════════════════════════════
+
+"fatal: remote origin already exists"
+→ git remote remove origin
+→ Then run the git remote add command again
+
+"Authentication failed"  
+→ Use Personal Access Token, NOT your password
+→ Get token from: https://github.com/settings/tokens
+
+"fatal: 'origin' does not appear"
+→ You're not in the right folder
+→ Make sure you're in: c:\PFSD PROJECT\cognitive-fatigue-detection
+
+"Could not resolve host: github.com"
+→ Check your internet connection
+
+
+AFTER SUCCESSFUL PUSH
+════════════════════════════════════════════════════════
+
+Your code is now on GitHub!
+
+View it at: https://github.com/YOUR_USERNAME/cognitive-fatigue-detection
+
+Future pushes are easier:
+   git add .
+   git commit -m "Your message"
+   git push
+
+Done! 🎉

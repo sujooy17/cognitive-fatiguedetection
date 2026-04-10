@@ -117,7 +117,7 @@ class Database:
         """Find user by ID"""
         return self.db.users.find_one({'_id': ObjectId(user_id)})
     
-    def save_activity_log(self, user_id, typing_speed, inactivity_duration, key_presses, error_rate=0, keypress_interval=0, session_time=0):
+    def save_activity_log(self, user_id, typing_speed, inactivity_duration, key_presses, error_rate=0, keypress_interval=0, session_time=0, session_id=None):
         """Save user activity log"""
         log = {
             'user_id': user_id,
@@ -129,8 +129,18 @@ class Database:
             'session_time': session_time,
             'timestamp': datetime.now()
         }
-        result = self.db.activity_logs.insert_one(log)
-        return str(result.inserted_id)
+        if session_id:
+            log['session_id'] = session_id
+            self.db.activity_logs.update_one(
+                {'user_id': user_id, 'session_id': session_id},
+                {'$set': log},
+                upsert=True
+            )
+            doc = self.db.activity_logs.find_one({'user_id': user_id, 'session_id': session_id})
+            return str(doc['_id']) if doc else None
+        else:
+            result = self.db.activity_logs.insert_one(log)
+            return str(result.inserted_id)
     
     def get_user_activity(self, user_id, limit=50):
         """Get recent activity logs for user"""
@@ -139,7 +149,7 @@ class Database:
         ).sort('timestamp', -1).limit(limit))
         return logs
     
-    def save_fatigue_result(self, user_id, fatigue_level, confidence, metrics):
+    def save_fatigue_result(self, user_id, fatigue_level, confidence, metrics, session_id=None):
         """Save fatigue detection result"""
         result = {
             'user_id': user_id,
@@ -148,12 +158,20 @@ class Database:
             'metrics': metrics,
             'timestamp': datetime.now()
         }
-        insert_result = self.db.fatigue_results.insert_one(result)
-        
-        # Audit log
-        self._audit_log('save_fatigue', user_id, f'Fatigue level: {fatigue_level}')
-        
-        return str(insert_result.inserted_id)
+        if session_id:
+            result['session_id'] = session_id
+            self.db.fatigue_results.update_one(
+                {'user_id': user_id, 'session_id': session_id},
+                {'$set': result},
+                upsert=True
+            )
+            self._audit_log('save_fatigue', user_id, f'Fatigue level: {fatigue_level}')
+            doc = self.db.fatigue_results.find_one({'user_id': user_id, 'session_id': session_id})
+            return str(doc['_id']) if doc else None
+        else:
+            insert_result = self.db.fatigue_results.insert_one(result)
+            self._audit_log('save_fatigue', user_id, f'Fatigue level: {fatigue_level}')
+            return str(insert_result.inserted_id)
     
     def get_latest_fatigue_result(self, user_id):
         """Get latest fatigue result for user"""

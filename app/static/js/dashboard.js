@@ -15,7 +15,6 @@ async function refreshDashboardData() {
     try {
         await loadDashboardStats();
         await loadChartData();
-        await loadAIInsights();
     } finally {
         isRefreshingDashboard = false;
     }
@@ -28,7 +27,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     await loadUserInfo();
     await loadDashboardStats();
-    await loadAIInsights();
     
     // Refresh stats every 10 seconds for smooth updates
     setInterval(refreshDashboardData, 10000);

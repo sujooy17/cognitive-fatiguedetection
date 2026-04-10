@@ -30,9 +30,19 @@ def analyze_fatigue(typing_speed, error_rate, keypress_interval, session_time, i
         'session_time': session_time
     }
     
-    if fatigue_model is not None:
+    # Evaluate heuristic rules first
+    h_level, h_conf, h_metrics = analyze_fatigue_heuristic(typing_speed, inactivity_duration, key_presses, error_rate)
+    
+    # If the user's specific rules trigger High fatigue, enforce it over the ML model.
+    if h_level == 'High':
+        fatigue_level = 'High'
+        fatigue_score = h_metrics.get('raw_score', 85)
+        recommendation = "Stress State: High"
+        confidence = 95
+        metrics = h_metrics
+    elif fatigue_model is not None:
         try:
-            # Predict
+            # Predict using ML fallback if heuristic doesn't strongly flag high
             df = pd.DataFrame([{
                 'typing_speed': typing_speed,
                 'error_rate': error_rate,
@@ -44,20 +54,22 @@ def analyze_fatigue(typing_speed, error_rate, keypress_interval, session_time, i
             if fatigue_pred == 1:
                 fatigue_level = 'High'
                 fatigue_score = 85
-                recommendation = "Take a 5-10 minute break. Relax your eyes and stretch your hands. Avoid continuous typing."
+                recommendation = "Stress State: High"
             else:
-                fatigue_level = 'Low'
-                fatigue_score = 20
-                recommendation = "You are in normal condition. Keep up the good work and maintain your current pace."
+                # Obey heuristic if ML says low
+                fatigue_level = h_level
+                fatigue_score = h_metrics.get('raw_score', 20)
+                recommendation = h_metrics.get('recommendation', "Stress State: Low")
                 
-            confidence = 85 # Simulated confidence from ML model
+            confidence = 85
+            metrics = h_metrics
         except Exception as e:
             print(f"Prediction error: {e}")
-            fatigue_level, confidence, metrics = analyze_fatigue_heuristic(typing_speed, inactivity_duration, key_presses)
+            fatigue_level, confidence, metrics = h_level, h_conf, h_metrics
             fatigue_score = metrics.get('raw_score', 50)
             recommendation = metrics.get('recommendation', '')
     else:
-        fatigue_level, confidence, metrics = analyze_fatigue_heuristic(typing_speed, inactivity_duration, key_presses)
+        fatigue_level, confidence, metrics = h_level, h_conf, h_metrics
         fatigue_score = metrics.get('raw_score', 50)
         recommendation = metrics.get('recommendation', '')
 
@@ -66,7 +78,7 @@ def analyze_fatigue(typing_speed, error_rate, keypress_interval, session_time, i
     
     return fatigue_level, confidence, metrics
 
-def analyze_fatigue_heuristic(typing_speed, inactivity_duration, key_presses):
+def analyze_fatigue_heuristic(typing_speed, inactivity_duration, key_presses, error_rate=0.0):
     """
     Original heuristic logic as fallback
     """
@@ -74,25 +86,36 @@ def analyze_fatigue_heuristic(typing_speed, inactivity_duration, key_presses):
     metrics = {
         'typing_speed': typing_speed,
         'inactivity_duration': inactivity_duration,
-        'key_presses': key_presses
+        'key_presses': key_presses,
+        'error_rate': error_rate
     }
     
-    if typing_speed < 25:
+    # If type normal then it should show low fatigue.
+    # If type very fast WITH more errors it should show high fatigue.
+    # If type slowly WITH errors it should also show high stress.
+    
+    if typing_speed > 60:
+        if error_rate > 8.0:
+            fatigue_score += 65  # Very fast with errors -> High fatigue
+        else:
+            fatigue_score += 15  # Fast but clean
+    elif typing_speed < 25:
+        if error_rate > 8.0:
+            fatigue_score += 65  # Slow with errors -> High fatigue
+        else:
+            fatigue_score += 30  # Slow but clean
+    else:
+        # Normal speed (25 - 60)
+        if error_rate > 15.0:
+            fatigue_score += 40  # Normal speed but extremely high errors
+        else:
+            fatigue_score += 10  # Normal speed and clean -> Low fatigue
+    
+    if key_presses < 10 and inactivity_duration > 60:
         fatigue_score += 30
-    elif typing_speed < 40:
-        fatigue_score += 15
-    elif typing_speed > 70:
-        fatigue_score -= 10
     
-    if key_presses < 20:
-        fatigue_score += 25
-    elif key_presses < 80:
-        fatigue_score += 10
-    
-    if inactivity_duration > 300:
-        fatigue_score += 25
-    elif inactivity_duration > 60:
-        fatigue_score += 15
+    if inactivity_duration > 120:
+        fatigue_score += 20
     
     fatigue_score = max(0, min(100, fatigue_score))
     
@@ -106,11 +129,11 @@ def analyze_fatigue_heuristic(typing_speed, inactivity_duration, key_presses):
     confidence = 75 + min(25, max(0, (key_presses - 20) // 6))
     
     if fatigue_level == 'Low':
-        recommendation = "Stress State: Low. You are in optimal flow! Maintain your current pace and posture."
+        recommendation = "Stress State: Low"
     elif fatigue_level == 'Medium':
-        recommendation = "Stress State: Medium. Your focus is dropping. Try the 20-20-20 rule and drink some water."
+        recommendation = "Stress State: Medium"
     else:
-        recommendation = "Stress State: High. You are exhausted! Step away from the screen and take a 10-15 minute physical break to recover."
+        recommendation = "Stress State: High"
 
     metrics['raw_score'] = fatigue_score
     metrics['recommendation'] = recommendation
@@ -133,6 +156,7 @@ def track_data():
         error_rate = data.get('error_rate', 0)
         keypress_interval = data.get('keypress_interval', 0.5)
         session_time = data.get('session_time', 0)
+        session_id = data.get('session_id')
         
         # Save activity log
         log_id = db.save_activity_log(
@@ -142,7 +166,8 @@ def track_data():
             key_presses,
             error_rate=error_rate,
             keypress_interval=keypress_interval,
-            session_time=session_time
+            session_time=session_time,
+            session_id=session_id
         )
         
         # Analyze fatigue using ML Model
@@ -156,13 +181,14 @@ def track_data():
         )
         
         # Save fatigue result
-        result_id = db.save_fatigue_result(user_id, fatigue_level, confidence, metrics)
+        result_id = db.save_fatigue_result(user_id, fatigue_level, confidence, metrics, session_id=session_id)
         
         return jsonify({
             'success': True,
             'message': 'Data tracked successfully',
             'fatigue_level': fatigue_level,
             'confidence': confidence,
+            'recommendation': metrics.get('recommendation', ''),
             'log_id': log_id,
             'result_id': result_id
         }), 200
@@ -177,8 +203,8 @@ def global_action():
     action = request.json.get('action')
     if action == 'start':
         tracker_instance.start()
-    elif action == 'pause':
-        tracker_instance.pause()
+    elif action == 'stop':
+        tracker_instance.stop()
     return jsonify({'success': True, 'state': tracker_instance.is_tracking})
 
 @tracking_bp.route('/api/global-metrics', methods=['GET'])

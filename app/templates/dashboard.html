@@ -548,6 +548,81 @@
             background: rgba(239, 68, 68, 0.25);
             border-color: rgba(239, 68, 68, 0.5);
         }
+        /* Custom Alert Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .alert-modal {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+            color: var(--text-primary);
+        }
+
+        .modal-overlay.active .alert-modal {
+            transform: translateY(0);
+        }
+
+        .alert-modal-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .alert-modal-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .alert-modal-text {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .alert-modal-btn {
+            background: #ef4444; /* Default to danger/alert color */
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .alert-modal-btn:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
     </style>
 </head>
 <body>
@@ -595,15 +670,15 @@
                     </div>
                 </div>
                 <div class="tracking-buttons">
-                    <button class="btn-tracking" onclick="startTracking()" id="startBtn" style="display: none;">
+                    <button class="btn-tracking" onclick="startTracking()" id="startBtn" style="display: inline-block;">
                         <i class="fas fa-circle"></i> Start Monitoring
                     </button>
-                    <button class="btn-stop" onclick="pauseTracking()" id="stopBtn" style="display: none;">
-                        <i class="fas fa-pause-circle"></i> Pause Monitoring
+                    <button class="btn-stop" onclick="stopTracking()" id="stopBtn" style="display: none;">
+                        <i class="fas fa-stop-circle"></i> Stop Monitoring
                     </button>
-                    <div class="tracking-status active" id="trackingStatus" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #10b981;">
-                        <i class="fas fa-dot-circle" style="color: #10b981; margin-right: 6px; animation: pulse 2s infinite;"></i>
-                        <span>Monitoring Active</span>
+                    <div class="tracking-status" id="trackingStatus" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3); color: #f59e0b;">
+                        <i class="fas fa-pause-circle" style="margin-right: 6px;"></i>
+                        <span>Monitoring Stopped</span>
                     </div>
                 </div>
             </div>
@@ -694,5 +769,17 @@
             <p>&copy; 2026 All rights belongs to AASS</p>
         </div>
     </footer>
+
+    <!-- Global Alert Modal -->
+    <div class="modal-overlay" id="globalAlertModal">
+        <div class="alert-modal">
+            <div class="alert-modal-icon" id="alertModalIcon">
+                <i class="fas fa-info-circle" style="color: #3b82f6;"></i>
+            </div>
+            <div class="alert-modal-title" id="alertModalTitle">Notification</div>
+            <div class="alert-modal-text" id="alertModalText">Message</div>
+            <button class="alert-modal-btn" id="alertModalBtn" onclick="closeGlobalModal()">Understood</button>
+        </div>
+    </div>
 </body>
 </html>

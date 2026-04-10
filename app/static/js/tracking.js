@@ -3,7 +3,7 @@ class BehaviorTracker {
     constructor() {
         this.isTracking = false;
         this.trackingInterval = null;
-        this.trackingDuration = 30000; // 30 seconds for demo
+        this.trackingDuration = 5000; // 5 seconds for rapid feedback
         
         // Tracking metrics
         this.typingSpeed = 0;
@@ -50,7 +50,7 @@ class BehaviorTracker {
         console.log('Global Tracking started...');
     }
     
-    async pauseTracking() {
+    async stopTracking() {
         this.isTracking = false;
         clearInterval(this.trackingInterval);
         
@@ -58,7 +58,7 @@ class BehaviorTracker {
             await fetch('/api/global-action', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'pause' })
+                body: JSON.stringify({ action: 'stop' })
             });
         } catch(e) {
             console.error(e);
@@ -71,7 +71,7 @@ class BehaviorTracker {
             console.warn('Could not use localStorage:', e);
         }
         
-        console.log('Global Tracking paused');
+        console.log('Global Tracking stopped');
     }
     
     async sendDataToServer() {
@@ -102,6 +102,17 @@ class BehaviorTracker {
                 
                 // Update UI with fatigue result
                 updateFatigueUI(data.fatigue_level, data.confidence);
+
+                // AI Recommendations Alert
+                if (data.fatigue_level === 'High' && data.recommendation) {
+                    const lastAlertTime = parseInt(localStorage.getItem('lastFatigueAlertTime') || '0');
+                    const now = Date.now();
+                    // Alert once every 5 minutes max
+                    if (now - lastAlertTime > 5 * 60 * 1000) {
+                        showGlobalModal('High Cognitive Fatigue Detected!', data.recommendation, 'danger');
+                        localStorage.setItem('lastFatigueAlertTime', now.toString());
+                    }
+                }
             }
             
             return true;
@@ -119,13 +130,36 @@ class BehaviorTracker {
 // Initialize tracker
 const tracker = new BehaviorTracker();
 
-// Auto start tracking automatically
-document.addEventListener('DOMContentLoaded', () => {
-    startTracking();
+// Sync global tracker state silently on load
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const response = await fetch('/api/global-metrics');
+        const data = await response.json();
+        if (data.success && data.metrics && data.metrics.is_tracking) {
+            tracker.isTracking = true;
+            if (!tracker.trackingInterval) {
+                tracker.trackingInterval = setInterval(() => {
+                    tracker.sendDataToServer();
+                }, tracker.trackingDuration);
+            }
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const trackingStatus = document.getElementById('trackingStatus');
+            if (startBtn) startBtn.style.display = 'none';
+            if (stopBtn) stopBtn.style.display = 'inline-block';
+            if (trackingStatus) {
+                trackingStatus.innerHTML = '<i class="fas fa-dot-circle" style="color: #10b981; margin-right: 6px; animation: pulse 2s infinite;"></i><span>Monitoring Active</span>';
+                trackingStatus.style.background = 'rgba(16, 185, 129, 0.15)';
+                trackingStatus.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                trackingStatus.style.color = '#10b981';
+                trackingStatus.classList.add('active');
+            }
+        }
+    } catch (e) {}
 });
 
 // Global tracking functions
-function startTracking() {
+function startTracking(isAutoStart = false) {
     tracker.startTracking();
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
@@ -141,18 +175,22 @@ function startTracking() {
         trackingStatus.classList.add('active');
     }
     
-    showNotification('Global OS Monitoring started! Your typing across all apps is being tracked.', 'success');
+    // Only show modal if it's explicitly started via button OR hasn't been shown in this active tab session
+    if (!isAutoStart || !sessionStorage.getItem('trackerModalShown')) {
+        showGlobalModal('Background Tracking Started', 'Your typing patterns and interactions are now being globally monitored by the OS to protect against cognitive fatigue.', 'success');
+        sessionStorage.setItem('trackerModalShown', 'true');
+    }
 }
 
-function pauseTracking() {
-    tracker.pauseTracking();
+function stopTracking() {
+    tracker.stopTracking();
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
     const trackingStatus = document.getElementById('trackingStatus');
     
     if (stopBtn) stopBtn.style.display = 'none';
     if (trackingStatus) {
-        trackingStatus.innerHTML = '<i class="fas fa-pause-circle" style="color: #f59e0b; margin-right: 6px;"></i><span>Monitoring Paused</span>';
+        trackingStatus.innerHTML = '<i class="fas fa-stop-circle" style="color: #f59e0b; margin-right: 6px;"></i><span>Monitoring Stopped</span>';
         trackingStatus.style.background = 'rgba(245, 158, 11, 0.15)';
         trackingStatus.style.borderColor = 'rgba(245, 158, 11, 0.3)';
         trackingStatus.style.color = '#f59e0b';
@@ -164,7 +202,7 @@ function pauseTracking() {
         }, 500);
     }
     
-    showNotification('Global OS Monitoring paused.', 'info');
+    showGlobalModal('Tracking Stopped', 'Global OS Monitoring has been securely stopped. Your activities are no longer being logged.', 'warning');
 }
 
 function updateFatigueUI(fatigueLevel, confidence) {
@@ -182,61 +220,48 @@ function updateFatigueUI(fatigueLevel, confidence) {
     badgeElement.className = 'fatigue-badge fatigue-' + fatigueLevel.toLowerCase();
 }
 
-function showNotification(message, type = 'info') {
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 15px 20px;
-        background: ${type === 'success' ? 'rgba(40, 167, 69, 0.2)' : 'rgba(23, 162, 184, 0.2)'};
-        border: 1px solid ${type === 'success' ? 'rgba(40, 167, 69, 0.5)' : 'rgba(23, 162, 184, 0.5)'};
-        color: ${type === 'success' ? '#6bff9d' : '#6bffff'};
-        border-radius: 10px;
-        z-index: 10000;
-        animation: slideRight 0.3s ease-out;
-        font-family: 'Poppins', sans-serif;
-    `;
-    
-    notification.textContent = message;
-    document.body.appendChild(notification);
-    
-    // Remove after 3 seconds
-    setTimeout(() => {
-        notification.style.animation = 'slideLeft 0.3s ease-out';
-        setTimeout(() => {
-            document.body.removeChild(notification);
-        }, 300);
-    }, 3000);
+function showGlobalModal(title, text, type = 'info') {
+    const modal = document.getElementById('globalAlertModal');
+    const icon = document.getElementById('alertModalIcon');
+    const titleEl = document.getElementById('alertModalTitle');
+    const textEl = document.getElementById('alertModalText');
+    const btn = document.getElementById('alertModalBtn');
+
+    if (!modal) return;
+
+    titleEl.textContent = title;
+    textEl.textContent = text;
+
+    if (type === 'success') {
+        icon.innerHTML = '<i class="fas fa-check-circle" style="color: #10b981;"></i>';
+        btn.style.background = '#10b981';
+    } else if (type === 'danger') {
+        icon.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>';
+        btn.style.background = '#ef4444';
+    } else if (type === 'warning') {
+        icon.innerHTML = '<i class="fas fa-exclamation-circle" style="color: #f59e0b;"></i>';
+        btn.style.background = '#f59e0b';
+    } else {
+        icon.innerHTML = '<i class="fas fa-info-circle" style="color: #3b82f6;"></i>';
+        btn.style.background = '#3b82f6';
+    }
+
+    modal.classList.add('active');
 }
 
-// Add animation styles to body once
-if (!document.getElementById('tracking-style')) {
-    const style = document.createElement('style');
-    style.id = 'tracking-style';
-    style.textContent = `
-        @keyframes slideRight {
-            from {
-                opacity: 0;
-                transform: translateX(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        
-        @keyframes slideLeft {
-            from {
-                opacity: 1;
-                transform: translateX(0);
-            }
-            to {
-                opacity: 0;
-                transform: translateX(30px);
-            }
-        }
-    `;
-    document.head.appendChild(style);
+function closeGlobalModal() {
+    const modal = document.getElementById('globalAlertModal');
+    if (modal) modal.classList.remove('active');
 }
+
+// Make accessible globally
+window.closeGlobalModal = closeGlobalModal;
+
+function showNotification(message, type = 'info') {
+    let title = 'Information';
+    if (type === 'success') title = 'Tracking Activated';
+    if (type === 'warning' || type === 'info') title = 'Status Update';
+
+    showGlobalModal(title, message, type);
+}
+

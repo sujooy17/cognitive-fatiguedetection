@@ -4,7 +4,9 @@ from pynput import keyboard
 
 class GlobalTracker:
     def __init__(self):
+        import uuid
         self.is_tracking = False
+        self.session_id = None
         self.key_presses = 0
         self.error_count = 0
         self.total_intervals = 0
@@ -38,7 +40,9 @@ class GlobalTracker:
         if self.is_tracking:
             return
             
+        import uuid
         self.is_tracking = True
+        self.session_id = str(uuid.uuid4())
         self.key_presses = 0
         self.error_count = 0
         self.total_intervals = 0
@@ -53,7 +57,7 @@ class GlobalTracker:
             self.listener = keyboard.Listener(on_press=self._on_press)
             self.listener.start()
 
-    def pause(self):
+    def stop(self):
         self.is_tracking = False
 
     def get_metrics_and_reset_interval(self):
@@ -66,13 +70,14 @@ class GlobalTracker:
         session_elapsed_seconds = max(now - (self.start_time if self.start_time else now), 1)
         session_time = session_elapsed_seconds / 60.0
         
-        # Instead of interval minutes, calculate typing speed based on a standard 30s block
-        typing_speed = round((self.key_presses / 5.0) / 0.5)
+        # Calculate typing speed using whole session duration
+        typing_speed = round((self.key_presses / 5.0) / session_time) if session_time > 0 else 0
 
         error_rate = (self.error_count / self.key_presses * 100.0) if self.key_presses > 0 else 0.0
         keypress_interval = (self.total_intervals / (self.key_presses - 1)) if self.key_presses > 1 else 0.0
         
         metrics = {
+            'session_id': getattr(self, 'session_id', None),
             'typing_speed': int(typing_speed),
             'inactivity_duration': int(self.inactivity_duration),
             'key_presses': self.key_presses,
@@ -82,13 +87,7 @@ class GlobalTracker:
             'is_tracking': self.is_tracking
         }
         
-        # Reset interval counters
-        if self.is_tracking:
-            self.key_presses = 0
-            self.error_count = 0
-            self.total_intervals = 0
-            self.last_keypress_time = None
-            
+        # We no longer reset counters here; this ensures the result is a unified 'start to stop' block
         return metrics
 
 # Singleton instance

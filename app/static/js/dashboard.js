@@ -14,7 +14,8 @@ async function refreshDashboardData() {
     lastRefreshTime = now;
     try {
         await loadDashboardStats();
-        await loadHistoricalChartData();
+        await loadChartData();
+        await loadAIInsights();
     } finally {
         isRefreshingDashboard = false;
     }
@@ -22,11 +23,12 @@ async function refreshDashboardData() {
 
 // Initialize dashboard on page load
 document.addEventListener('DOMContentLoaded', async () => {
-    // Load historical chart data from API
-    await loadHistoricalChartData();
+    // Load live chart data from API
+    await loadChartData();
     
     await loadUserInfo();
     await loadDashboardStats();
+    await loadAIInsights();
     
     // Refresh stats every 10 seconds for smooth updates
     setInterval(refreshDashboardData, 10000);
@@ -113,12 +115,21 @@ async function loadDashboardStats() {
                 animateWidth(confidenceFill, confidence);
             }
             
-            // Update sessions today
-            const sessionsTodayElement = document.getElementById('sessionsToday');
-            const activitiesToday = data.activities_today || 0;
-            const currentSessions = parseInt(sessionsTodayElement.textContent) || 0;
-            if (currentSessions !== activitiesToday) {
-                animateCounter('sessionsToday', activitiesToday);
+            // Update raw score
+            const rawScoreElement = document.getElementById('rawScoreValue');
+            if (rawScoreElement) {
+                rawScoreElement.textContent = data.raw_score !== undefined ? data.raw_score : '--';
+            }
+
+            // Update live recommendation
+            const recElement = document.getElementById('liveRecommendation');
+            if (recElement && data.recommendation) {
+                recElement.textContent = data.recommendation;
+                
+                // Add color hints based on fatigue status
+                if (data.fatigue_status === 'Low') recElement.style.color = '#10b981';
+                else if (data.fatigue_status === 'Medium') recElement.style.color = '#f59e0b';
+                else if (data.fatigue_status === 'High') recElement.style.color = '#ef4444';
             }
         }
     } catch (error) {
@@ -166,12 +177,10 @@ async function loadHistoricalChartData() {
         const data = await response.json();
         
         if (data.success && data.fatigue_chart && data.typing_chart) {
-            console.log('Historical chart data loaded:', data);
             
             // Wait for Chart.js to be available
             if (typeof Chart === 'undefined') {
-                console.warn('Chart.js not loaded yet, waiting...');
-                setTimeout(() => loadHistoricalChartData(), 500);
+                console.warn('Chart.js not loaded, showing empty state');
                 return;
             }
             
@@ -531,3 +540,33 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 });
 
 initializeTheme();
+
+async function loadAIInsights() {
+    try {
+        const response = await fetch('/api/ai-insights');
+        const data = await response.json();
+        
+        if (data.success && data.insights) {
+            const insightsContainer = document.getElementById('insightsGrid');
+            if (insightsContainer) {
+                insightsContainer.innerHTML = '';
+                
+                data.insights.forEach(insight => {
+                    const card = document.createElement('div');
+                    card.className = `insight-card ${insight.type ? 'border-' + insight.type : ''}`;
+                    if(insight.type === 'danger') card.style.borderLeftColor = '#ef4444';
+                    else if(insight.type === 'warning') card.style.borderLeftColor = '#f59e0b';
+                    else if(insight.type === 'success') card.style.borderLeftColor = '#10b981';
+                    
+                    card.innerHTML = `
+                        <h4><i class="${insight.icon}"></i> ${insight.title}</h4>
+                        <p>${insight.message}</p>
+                    `;
+                    insightsContainer.appendChild(card);
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error loading AI insights:', error);
+    }
+}

@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.0.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     <style>
         /* Dashboard Specific Styles */
         .dashboard-container {
@@ -560,6 +560,7 @@
             </div>
             <ul class="sidebar-menu">
                 <li><a href="/dashboard" class="active"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+                <li><a href="#ai-insights-section"><i class="fas fa-robot"></i> AI Insights</a></li>
                 <li><a href="/activity"><i class="fas fa-history"></i> Activity</a></li>
                 <li><a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
@@ -594,14 +595,14 @@
                     </div>
                 </div>
                 <div class="tracking-buttons">
-                    <button class="btn-tracking" onclick="startTracking()" id="startBtn">
+                    <button class="btn-tracking" onclick="startTracking()" id="startBtn" style="display: none;">
                         <i class="fas fa-circle"></i> Start Monitoring
                     </button>
-                    <button class="btn-stop" onclick="stopTracking()" id="stopBtn" style="display: none;">
-                        <i class="fas fa-stop-circle"></i> Stop Monitoring
+                    <button class="btn-stop" onclick="pauseTracking()" id="stopBtn" style="display: none;">
+                        <i class="fas fa-pause-circle"></i> Pause Monitoring
                     </button>
-                    <div class="tracking-status" id="trackingStatus">
-                        <i class="fas fa-dot-circle" style="color: #ef4444; margin-right: 6px;"></i>
+                    <div class="tracking-status active" id="trackingStatus" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #10b981;">
+                        <i class="fas fa-dot-circle" style="color: #10b981; margin-right: 6px; animation: pulse 2s infinite;"></i>
                         <span>Monitoring Active</span>
                     </div>
                 </div>
@@ -641,21 +642,22 @@
                     <div class="stat-card-value" id="fatigueStatus">--</div>
                     <div class="stat-card-footer">Cognitive State
                         <div class="fatigue-badge" id="fatigueBadge"></div>
+                        <div style="margin-top: 5px; color: var(--text-primary); font-weight: bold;">Raw Score: <span id="rawScoreValue">--</span> / 100</div>
                     </div>
                     <div class="confidence-meter">
                         <div class="confidence-fill" id="confidenceFill" style="width: 0%;"></div>
                     </div>
                 </div>
 
-                <div class="stat-card">
+                <div class="stat-card" style="border-left: 4px solid var(--secondary-color);">
                     <div class="stat-card-header">
-                        <div class="stat-card-title">Session Statistics</div>
+                        <div class="stat-card-title">Live Recommendation</div>
                         <div class="stat-card-icon">
-                            <i class="fas fa-stopwatch"></i>
+                            <i class="fas fa-magic"></i>
                         </div>
                     </div>
-                    <div class="stat-card-value" id="sessionsToday">0</div>
-                    <div class="stat-card-footer">Active sessions today</div>
+                    <div class="stat-card-value" style="font-size: 1.1rem; line-height: 1.5; margin-bottom: 10px;" id="liveRecommendation">Start tracking to get recommendations.</div>
+                    <div class="stat-card-footer">Based on your current activity</div>
                 </div>
             </div>
 
@@ -680,40 +682,7 @@
                 </div>
             </div>
 
-            <!-- Performance Insights Section -->
-            <div style="margin-top: 40px;">
-                <div class="insights-title">
-                    <i class="fas fa-lightbulb"></i> Performance Insights
-                </div>
-                <div class="insights-grid">
-                    <div class="insight-card">
-                        <h4><i class="fas fa-check-circle"></i> Consistency</h4>
-                        <p>Your typing patterns show good consistency throughout the day. Keep maintaining regular work intervals.</p>
-                    </div>
-                    <div class="insight-card">
-                        <h4><i class="fas fa-hourglass-half"></i> Peak Performance</h4>
-                        <p>Your cognitive performance peaks between 10 AM - 12 PM. Schedule critical tasks during this time.</p>
-                    </div>
-                    <div class="insight-card">
-                        <h4><i class="fas fa-battery-full"></i> Energy Level</h4>
-                        <p>Take regular breaks every 45 minutes to maintain optimal focus and prevent fatigue buildup.</p>
-                    </div>
-                    <div class="insight-card">
-                        <h4><i class="fas fa-target"></i> Goal Progress</h4>
-                        <p>You're on track! Maintain your current activity level to achieve your weekly performance goals.</p>
-                    </div>
-                    <div class="insight-card">
-                        <h4><i class="fas fa-exclamation-circle"></i> Caution</h4>
-                        <p>Fatigue detected after 6 PM. Consider focusing on lighter tasks during evening hours.</p>
-                    </div>
-                    <div class="insight-card">
-                        <h4><i class="fas fa-star"></i> Recommendation</h4>
-                        <p>Based on your patterns, increasing water intake may help with afternoon fatigue levels.</p>
-                    </div>
-                </div>
-            </div>
-
-
+            <!-- AI Insights removed based on global tracker usage -->
         </div>
     </div>
 

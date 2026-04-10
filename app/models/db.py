@@ -117,13 +117,16 @@ class Database:
         """Find user by ID"""
         return self.db.users.find_one({'_id': ObjectId(user_id)})
     
-    def save_activity_log(self, user_id, typing_speed, inactivity_duration, key_presses):
+    def save_activity_log(self, user_id, typing_speed, inactivity_duration, key_presses, error_rate=0, keypress_interval=0, session_time=0):
         """Save user activity log"""
         log = {
             'user_id': user_id,
             'typing_speed': typing_speed,
             'inactivity_duration': inactivity_duration,
             'key_presses': key_presses,
+            'error_rate': error_rate,
+            'keypress_interval': keypress_interval,
+            'session_time': session_time,
             'timestamp': datetime.now()
         }
         result = self.db.activity_logs.insert_one(log)

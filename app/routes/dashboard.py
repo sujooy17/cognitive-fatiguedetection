@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, jsonify, session, redirect, url_for
 from app.models.db import get_db
 from datetime import datetime, timedelta
+from app.models.reminder_engine import ReminderEngine
 
 dashboard_bp = Blueprint('dashboard', __name__)
 db = get_db()
@@ -58,9 +59,12 @@ def dashboard_stats():
         'activity_level': latest_activity.get('key_presses', 0) if latest_activity else 0,
         'fatigue_status': latest_fatigue.get('fatigue_level', 'Not Analyzed') if latest_fatigue else 'Not Analyzed',
         'confidence': latest_fatigue.get('confidence', 0) if latest_fatigue else 0,
-        'activities_today': today_activities,
+        'raw_score': latest_fatigue.get('metrics', {}).get('raw_score', '--') if latest_fatigue else '--',
+        'recommendation': latest_fatigue.get('metrics', {}).get('recommendation', 'Start tracking to get recommendations.') if latest_fatigue else 'Start tracking to get recommendations.',
         'avg_typing_speed': round(avg_typing_speed, 2)
     }), 200
+
+
 
 @dashboard_bp.route('/api/chart-data')
 def chart_data():
@@ -106,3 +110,24 @@ def chart_data():
             'data': typing_speeds
         }
     }), 200
+
+@dashboard_bp.route('/api/ai-insights')
+def get_ai_insights():
+    """Get personalized AI insights from the local engine"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+    
+    user_id = session['user_id']
+    
+    # Get last 24h data
+    logs = db.get_user_activity(user_id, limit=100)
+    fatigue_results = db.get_fatigue_history(user_id, limit=50)
+    
+    engine = ReminderEngine(activity_logs=logs, fatigue_results=fatigue_results)
+    insights = engine.generate_insights()
+    
+    return jsonify({
+        'success': True,
+        'insights': insights
+    }), 200
+

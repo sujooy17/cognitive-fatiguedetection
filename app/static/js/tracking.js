@@ -8,7 +8,10 @@ class BehaviorTracker {
         // Tracking metrics
         this.typingSpeed = 0;
         this.keyPresses = 0;
+        this.errorCount = 0;
         this.startTime = null;
+        this.lastKeyPressTime = null;
+        this.totalIntervals = 0;
         this.inactivityDuration = 0;
         this.inactivityTimer = null;
         
@@ -16,64 +19,50 @@ class BehaviorTracker {
     }
     
     initEventListeners() {
-        // Track key presses
-        document.addEventListener('keydown', (e) => {
-            if (this.isTracking) {
-                this.keyPresses++;
-                this.resetInactivityTimer();
-            }
-        });
-        
-        // Track clicks and reset inactivity timer
-        document.addEventListener('click', () => {
-            if (this.isTracking) {
-                this.resetInactivityTimer();
-            }
-        });
+        // Core tracking shifted to backend Python Global Tracker (pynput)
     }
     
     resetInactivityTimer() {
-        this.inactivityDuration = 0;
-        if (this.inactivityTimer) {
-            clearInterval(this.inactivityTimer);
-        }
+        // Managed by global tracker
     }
     
-    startTracking() {
+    async startTracking() {
         this.isTracking = true;
-        this.keyPresses = 0;
-        this.inactivityDuration = 0;
-        this.typingSpeed = 0;
-        this.startTime = Date.now();
         
-        // Track inactivity
-        if (this.inactivityTimer) {
-            clearInterval(this.inactivityTimer);
+        try {
+            await fetch('/api/global-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'start' })
+            });
+        } catch(e) {
+            console.error(e);
         }
-        this.inactivityTimer = setInterval(() => {
-            if (this.isTracking) {
-                this.inactivityDuration++;
-            }
-        }, 1000);
         
-        // Send data to server every 30 seconds
         if (this.trackingInterval) {
             clearInterval(this.trackingInterval);
         }
+        
         this.trackingInterval = setInterval(() => {
             this.sendDataToServer();
         }, this.trackingDuration);
         
-        console.log('Tracking started...');
+        console.log('Global Tracking started...');
     }
     
-    async stopTracking() {
+    async pauseTracking() {
         this.isTracking = false;
         clearInterval(this.trackingInterval);
-        clearInterval(this.inactivityTimer);
         
-        // Send final data
-        await this.sendDataToServer();
+        try {
+            await fetch('/api/global-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'pause' })
+            });
+        } catch(e) {
+            console.error(e);
+        }
         
         // Trigger dashboard refresh using localStorage
         try {
@@ -82,50 +71,37 @@ class BehaviorTracker {
             console.warn('Could not use localStorage:', e);
         }
         
-        console.log('Tracking stopped');
-        console.log('Final metrics:', {
-            typing_speed: this.typingSpeed,
-            inactivity_duration: this.inactivityDuration,
-            key_presses: this.keyPresses
-        });
+        console.log('Global Tracking paused');
     }
     
     async sendDataToServer() {
-        if (!this.isTracking && this.keyPresses === 0) return;
-
-        const elapsedMilliseconds = Math.max(Date.now() - this.startTime, 1000);
-        const elapsedMinutes = elapsedMilliseconds / 60000;
-        this.typingSpeed = Math.round((this.keyPresses / 5) / elapsedMinutes);
+        if (!this.isTracking) return;
 
         try {
+            // Poll for OS-wide global interactions from background Python threads
+            const metricsReq = await fetch('/api/global-metrics');
+            const metricsRes = await metricsReq.json();
+            
+            if (!metricsRes.success || !metricsRes.metrics) return;
+            const globalData = metricsRes.metrics;
+
+            // Transmit Global OS Stats directly to ML predictor
             const response = await fetch('/api/track-data', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    typing_speed: this.typingSpeed,
-                    inactivity_duration: this.inactivityDuration,
-                    key_presses: this.keyPresses
-                })
+                body: JSON.stringify(globalData)
             });
             
             const data = await response.json();
             
             if (data.success) {
-                console.log('Data tracked successfully!');
+                console.log('Global Data tracked successfully!');
                 console.log('Fatigue Level:', data.fatigue_level);
-                console.log('Confidence:', data.confidence + '%');
                 
                 // Update UI with fatigue result
                 updateFatigueUI(data.fatigue_level, data.confidence);
-                
-                // Reset counters for next interval
-                if (this.isTracking) {
-                    this.keyPresses = 0;
-                    this.inactivityDuration = 0;
-                    this.startTime = Date.now();
-                }
             }
             
             return true;
@@ -136,16 +112,17 @@ class BehaviorTracker {
     }
     
     getMetrics() {
-        return {
-            typing_speed: Math.round(this.typingSpeed),
-            inactivity_duration: this.inactivityDuration,
-            key_presses: this.keyPresses
-        };
+        return {};
     }
 }
 
 // Initialize tracker
 const tracker = new BehaviorTracker();
+
+// Auto start tracking automatically
+document.addEventListener('DOMContentLoaded', () => {
+    startTracking();
+});
 
 // Global tracking functions
 function startTracking() {
@@ -156,26 +133,38 @@ function startTracking() {
     
     if (startBtn) startBtn.style.display = 'none';
     if (stopBtn) stopBtn.style.display = 'inline-block';
-    if (trackingStatus) trackingStatus.classList.add('active');
+    if (trackingStatus) {
+        trackingStatus.innerHTML = '<i class="fas fa-dot-circle" style="color: #10b981; margin-right: 6px; animation: pulse 2s infinite;"></i><span>Monitoring Active</span>';
+        trackingStatus.style.background = 'rgba(16, 185, 129, 0.15)';
+        trackingStatus.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        trackingStatus.style.color = '#10b981';
+        trackingStatus.classList.add('active');
+    }
     
-    showNotification('Monitoring started! Your behavior is being tracked.', 'success');
+    showNotification('Global OS Monitoring started! Your typing across all apps is being tracked.', 'success');
 }
 
-function stopTracking() {
-    tracker.stopTracking();
+function pauseTracking() {
+    tracker.pauseTracking();
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
     const trackingStatus = document.getElementById('trackingStatus');
     
     if (stopBtn) stopBtn.style.display = 'none';
-    if (trackingStatus) trackingStatus.classList.remove('active');
+    if (trackingStatus) {
+        trackingStatus.innerHTML = '<i class="fas fa-pause-circle" style="color: #f59e0b; margin-right: 6px;"></i><span>Monitoring Paused</span>';
+        trackingStatus.style.background = 'rgba(245, 158, 11, 0.15)';
+        trackingStatus.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+        trackingStatus.style.color = '#f59e0b';
+        trackingStatus.classList.remove('active');
+    }
     if (startBtn) {
         setTimeout(() => {
             startBtn.style.display = 'inline-block';
         }, 500);
     }
     
-    showNotification('Monitoring stopped. Data has been saved.', 'info');
+    showNotification('Global OS Monitoring paused.', 'info');
 }
 
 function updateFatigueUI(fatigueLevel, confidence) {
